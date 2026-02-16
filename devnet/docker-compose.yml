@@ -1,0 +1,91 @@
+name: cgt-devnet
+
+services:
+  op-reth:
+    image: ${OP_RETH_IMAGE:-us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v1.10.0}
+    ports:
+      - "${L2_HTTP_PORT:-9545}:9545"
+      - "${L2_WS_PORT:-9546}:9546"
+      - "${L2_AUTH_PORT:-9551}:9551"
+    volumes:
+      - reth-data:/data
+      - ${GENESIS_FILE:-./genesis.json}:/config/genesis.json:ro
+      - ${JWT_FILE:-./jwt.hex}:/config/jwt.hex:ro
+    command:
+      - node
+      - --chain=/config/genesis.json
+      - --datadir=/data
+      - --http
+      - --http.addr=0.0.0.0
+      - --http.port=9545
+      - --http.api=eth,net,web3,debug,txpool
+      - --http.corsdomain=*
+      - --ws
+      - --ws.addr=0.0.0.0
+      - --ws.port=9546
+      - --ws.api=eth,net,web3,debug,txpool
+      - --authrpc.addr=0.0.0.0
+      - --authrpc.port=9551
+      - --authrpc.jwtsecret=/config/jwt.hex
+      - --rpc.eth-proof-window=1000000
+      - --log.stdout.filter=info
+
+  op-node:
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node:latest
+    depends_on:
+      - op-reth
+    ports:
+      - "${OP_NODE_RPC_PORT:-7000}:7000"
+    volumes:
+      - ${ROLLUP_FILE:-./rollup.json}:/config/rollup.json:ro
+      - ${JWT_FILE:-./jwt.hex}:/config/jwt.hex:ro
+      - ${P2P_KEY_FILE:-./p2p-key.txt}:/config/p2p-key.txt:ro
+    command:
+      - op-node
+      - --rollup.config=/config/rollup.json
+      - --l1=${L1_RPC}
+      - --l1.beacon=${L1_BEACON}
+      - --l2=http://op-reth:9551
+      - --l2.jwt-secret=/config/jwt.hex
+      - --rpc.addr=0.0.0.0
+      - --rpc.port=7000
+      - --sequencer.enabled
+      - --sequencer.l1-confs=0
+      - --p2p.priv.path=/config/p2p-key.txt
+      - --p2p.disable
+      - --log.level=info
+
+  op-batcher:
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-batcher:latest
+    depends_on:
+      - op-node
+    command:
+      - op-batcher
+      - --l1-eth-rpc=${L1_RPC}
+      - --l2-eth-rpc=http://op-reth:9545
+      - --rollup-rpc=http://op-node:7000
+      - --private-key=${BATCHER_KEY}
+      - --batch-type=1
+      - --throttle.unsafe-da-bytes-lower-threshold=0
+      - --sub-safety-margin=4
+      - --max-channel-duration=1
+      - --max-pending-tx=1
+      - --log.level=info
+
+  op-proposer:
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-proposer:latest
+    depends_on:
+      - op-node
+    command:
+      - op-proposer
+      - --l1-eth-rpc=${L1_RPC}
+      - --rollup-rpc=http://op-node:7000
+      - --private-key=${PROPOSER_KEY}
+      - --game-factory-address=${DISPUTE_GAME_FACTORY}
+      - --game-type=1
+      - --proposal-interval=30s
+      - --allow-non-finalized
+      - --log.level=info
+
+volumes:
+  reth-data:

@@ -1,0 +1,17 @@
+[tools]
+# Managed by mise.
+node = "22"
+jq = "1.7.1"
+just = "1.37.0"
+forge = "1.2.3"
+cast = "1.2.3"
+
+[tool_alias]
+just = "ubi:casey/just"
+forge = "ubi:foundry-rs/foundry[exe=forge]"
+cast = "ubi:foundry-rs/foundry[exe=cast]"
+
+# System dependencies not managed by mise:
+# - docker + docker compose
+# - openssl
+# - timeout (or gtimeout on macOS)

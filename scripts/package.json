@@ -1,0 +1,17 @@
+{
+  "name": "cgt-bridge-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deposit": "tsx deposit.ts",
+    "withdraw": "tsx withdraw.ts"
+  },
+  "dependencies": {
+    "viem": "^2.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

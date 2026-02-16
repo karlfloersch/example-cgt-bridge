@@ -1,0 +1,59 @@
+# =============================================================================
+# op-deployer Intent — CGT Chain on Sepolia (Fast Withdrawal Friendly)
+# =============================================================================
+# Use with:
+# - OP deployer image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-deployer:v0.6.0-rc.2
+# - op-deployer init --intent-type custom
+#
+# IMPORTANT:
+# - When `opcmAddress` is set, do NOT include `[superchainRoles]`.
+# - `initialLiquidity` must be a compact hex quantity (no leading zeros).
+
+configType = "custom"
+opDeployerVersion = "v0.6.0-rc.2"
+l1ChainID = 11155111  # Sepolia
+opcmAddress = "0xYOUR_BOOTSTRAPPED_OPCM_ADDRESS"
+fundDevAccounts = true
+l1ContractsLocator = "embedded"
+l2ContractsLocator = "embedded"
+
+[globalDeployOverrides]
+  proofMaturityDelaySeconds = 15
+  disputeGameFinalityDelaySeconds = 1
+  preimageOracleChallengePeriod = 5
+  faultGameClockExtension = 5
+  faultGameMaxClockDuration = 15
+
+[[chains]]
+  # Replace with your own unique chain ID (uint256 hex).
+  id = "0x00000000000000000000000000000000000000000000000000000000deadbeef"
+
+  baseFeeVaultRecipient = "0xYOUR_ADDRESS"
+  l1FeeVaultRecipient = "0xYOUR_ADDRESS"
+  sequencerFeeVaultRecipient = "0xYOUR_ADDRESS"
+  operatorFeeVaultRecipient = "0xYOUR_ADDRESS"
+
+  eip1559DenominatorCanyon = 250
+  eip1559Denominator = 50
+  eip1559Elasticity = 6
+  gasLimit = 60000000
+  operatorFeeScalar = 0
+  operatorFeeConstant = 0
+  chainFeesRecipient = "0x0000000000000000000000000000000000000000"
+  minBaseFee = 0
+  daFootprintGasScalar = 0
+
+  [chains.roles]
+    l1ProxyAdminOwner = "0xYOUR_ADDRESS"
+    l2ProxyAdminOwner = "0xYOUR_ADDRESS"
+    systemConfigOwner = "0xYOUR_ADDRESS"
+    unsafeBlockSigner = "0xYOUR_SEQUENCER_ADDRESS"
+    batcher = "0xYOUR_BATCHER_ADDRESS"
+    proposer = "0xYOUR_PROPOSER_ADDRESS"
+    challenger = "0xYOUR_ADDRESS"
+
+  [chains.customGasToken]
+    name = "My Token"
+    symbol = "MYT"
+    initialLiquidity = "0x52b7d2dcc80cd2e4000000"
+    liquidityControllerOwner = "0xYOUR_ADDRESS"

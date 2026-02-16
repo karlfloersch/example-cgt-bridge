@@ -1,0 +1,2 @@
+interfaces/=lib/optimism/packages/contracts-bedrock/interfaces/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
