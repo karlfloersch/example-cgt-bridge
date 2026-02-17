@@ -1073,6 +1073,8 @@ function ensureNodeDepsInstalled(): void {
 }
 
 function main(): void {
+  process.chdir(ROOT_DIR);
+
   const phaseArg = process.argv[2] ?? process.env.DEPLOY_PHASE ?? "all";
   if (phaseArg !== "chain" && phaseArg !== "bridge" && phaseArg !== "all") {
     die("Deploy phase must be one of: chain, bridge, all");

@@ -222,48 +222,52 @@ async function main() {
   // Step 4: Wait for game clock to expire, then resolve
   // -----------------------------------------------------------------------
   console.log("\n4. Waiting for game clock to expire (faultGameMaxClockDuration)...");
-
-  // Poll until resolveClaim succeeds (ClockNotExpired = 0xf2440b53)
-  let resolveClaimHash: Hash | undefined;
-  for (let attempt = 0; attempt < 20; attempt++) {
-    try {
-      // Simulate first to avoid wasting gas on reverts
-      await l1Public.simulateContract({
-        account,
-        address: gameAddress,
-        abi: disputeGameAbi,
-        functionName: "resolveClaim",
-        args: [0n, 512n],
-      });
-      // Simulation passed — send the real tx
-      resolveClaimHash = await l1Wallet.writeContract({
-        address: gameAddress,
-        abi: disputeGameAbi,
-        functionName: "resolveClaim",
-        args: [0n, 512n],
-      });
-      break;
-    } catch (e: any) {
-      const msg = e?.cause?.raw ?? e?.message ?? "";
-      if ((typeof msg === "string" && msg.includes("f2440b53")) || e?.cause?.signature === "0xf2440b53") {
-        console.log(`   Game clock not expired yet, retrying resolveClaim (${attempt + 1}/20)`);
-        await sleep(12_000); // wait one Sepolia block
-        continue;
-      }
-      throw e;
-    }
-  }
-  if (!resolveClaimHash) throw new Error("resolveClaim timed out (clock never expired)");
-
-  await waitForReceiptWithRetry(l1Public as any, resolveClaimHash, "resolveClaim");
-  console.log(`\n   resolveClaim tx: ${resolveClaimHash}`);
-
-  console.log("   Resolving game...");
   let gameStatus = Number(await l1Public.readContract({
     address: gameAddress,
     abi: disputeGameAbi,
     functionName: "status",
   }));
+
+  if (gameStatus === 0) {
+    // Poll until resolveClaim succeeds (ClockNotExpired = 0xf2440b53)
+    let resolveClaimHash: Hash | undefined;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        // Simulate first to avoid wasting gas on reverts
+        await l1Public.simulateContract({
+          account,
+          address: gameAddress,
+          abi: disputeGameAbi,
+          functionName: "resolveClaim",
+          args: [0n, 512n],
+        });
+        // Simulation passed — send the real tx
+        resolveClaimHash = await l1Wallet.writeContract({
+          address: gameAddress,
+          abi: disputeGameAbi,
+          functionName: "resolveClaim",
+          args: [0n, 512n],
+        });
+        break;
+      } catch (e: any) {
+        const msg = e?.cause?.raw ?? e?.message ?? "";
+        if ((typeof msg === "string" && msg.includes("f2440b53")) || e?.cause?.signature === "0xf2440b53") {
+          console.log(`   Game clock not expired yet, retrying resolveClaim (${attempt + 1}/20)`);
+          await sleep(12_000); // wait one Sepolia block
+          continue;
+        }
+        throw e;
+      }
+    }
+    if (!resolveClaimHash) throw new Error("resolveClaim timed out (clock never expired)");
+
+    await waitForReceiptWithRetry(l1Public as any, resolveClaimHash, "resolveClaim");
+    console.log(`\n   resolveClaim tx: ${resolveClaimHash}`);
+
+    console.log("   Resolving game...");
+  } else {
+    console.log(`   Game already resolved: ${gameStatusLabel(gameStatus)}`);
+  }
   for (let attempt = 1; attempt <= 20 && gameStatus === 0; attempt++) {
     try {
       const resolveHash = await l1Wallet.writeContract({
@@ -326,8 +330,10 @@ async function main() {
       // Retry on timing-related errors (proof not mature, game not finalized)
       if (
         msg.includes("ProposalNotValidated") ||
+        msg.includes("OptimismPortal_Unproven") ||
         msg.includes("maturity") ||
         msg.includes("Finality") ||
+        msg.includes("0xcca6afda") ||
         msg.includes("0x332a57f8") ||
         msg.includes("Timed out while waiting for transaction") ||
         msg.includes("TransactionReceiptNotFound")
