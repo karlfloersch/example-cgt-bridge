@@ -6,6 +6,7 @@
 .direnv/
 devnet/.env
 devnet/.env.local
+tasks/.env.runtime
 scripts/.env.runtime
 
 # Generated chain artifacts
@@ -19,6 +20,7 @@ devnet/data/
 devnet/work/
 
 # Node.js
+tasks/node_modules/
 scripts/node_modules/
 
 # Forge

@@ -1036,8 +1036,8 @@ function deployBridgePhase(
     die("L2 bridge was not authorized as minter");
   }
 
-  log("Writing scripts/.env.runtime and devnet/work/e2e-latest.env");
-  writeEnvFile(path.join(ROOT_DIR, "scripts", ".env.runtime"), {
+  log("Writing tasks/.env.runtime and devnet/work/e2e-latest.env");
+  writeEnvFile(path.join(ROOT_DIR, "tasks", ".env.runtime"), {
     L1_RPC: l1Rpc,
     L2_RPC: context.l2RpcUrl,
     PRIVATE_KEY: deployerKeyHex,
@@ -1059,16 +1059,16 @@ function deployBridgePhase(
 }
 
 function ensureNodeDepsInstalled(): void {
-  const nodeModulesDir = path.join(ROOT_DIR, "scripts", "node_modules");
+  const nodeModulesDir = path.join(ROOT_DIR, "tasks", "node_modules");
   if (existsSync(nodeModulesDir)) {
     return;
   }
-  log("Installing Node dependencies in scripts/");
-  const packageLockPath = path.join(ROOT_DIR, "scripts", "package-lock.json");
+  log("Installing Node dependencies in tasks/");
+  const packageLockPath = path.join(ROOT_DIR, "tasks", "package-lock.json");
   const command = existsSync(packageLockPath) ? ["ci", "--no-audit", "--no-fund"] : ["install", "--no-audit", "--no-fund"];
-  const result = run("npm", command, { cwd: path.join(ROOT_DIR, "scripts"), stdio: "inherit" });
+  const result = run("npm", command, { cwd: path.join(ROOT_DIR, "tasks"), stdio: "inherit" });
   if (result.status !== 0) {
-    die("Failed to install Node dependencies for scripts/");
+    die("Failed to install Node dependencies for tasks/");
   }
 }
 

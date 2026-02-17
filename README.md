@@ -24,6 +24,13 @@ just withdraw-test 1
 # just withdraw-test 1 0x<withdraw_tx_hash>
 ```
 
+These are the four operator commands for the full flow:
+
+1. `just deploy-chain`
+2. `just deploy-bridge`
+3. `just deposit-test 1`
+4. `just withdraw-test 1`
+
 ## Which Guide To Follow?
 
 - Use `devnet/README.md` if you want the full reproducible workflow (new superchain + new chain + Docker services + bridge + tests).
@@ -43,7 +50,7 @@ just withdraw-test 1
 - Reuses the latest chain metadata from `devnet/work/e2e-latest.env`.
 - Verifies services are up and re-checks fast permissioned dispute-game overrides.
 - Deploys a test L1 token and bridge pair.
-- Writes `scripts/.env.runtime` for deposit/withdraw scripts.
+- Writes `tasks/.env.runtime` for deposit/withdraw scripts.
 
 ## Bridge Overview
 
@@ -66,14 +73,14 @@ Scale factor:
 
 - Withdrawal proving/finalization can take a few minutes even with fast overrides.
 - Keep `op-batcher` and `op-proposer` healthy for withdrawal progress.
-- Use `scripts/withdraw.ts` (via `just withdraw-test`) for progress logs and resume support.
+- Use `tasks/withdraw.ts` (via `just withdraw-test`) for progress logs and resume support.
 - This repo is an example implementation, not production bridge infrastructure.
 
 ## Repository Layout
 
 - `devnet/README.md`: canonical step-by-step operational guide.
 - `devnet/scripts/`: deposit/withdraw wrappers.
-- `scripts/`: TypeScript deploy + deposit/withdraw flows.
+- `tasks/`: TypeScript deploy + deposit/withdraw flows.
 - `src/`: bridge/token contracts.
 - `script/`: Forge deployment scripts.
 - `justfile`: primary operator commands.

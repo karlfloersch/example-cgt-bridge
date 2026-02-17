@@ -24,6 +24,13 @@ just withdraw-test 1
 # just withdraw-test 1 0x<withdraw_tx_hash>
 ```
 
+These are the four operator commands for the full end-to-end flow:
+
+1. `just deploy-chain`
+2. `just deploy-bridge`
+3. `just deposit-test 1`
+4. `just withdraw-test 1`
+
 ## Required Inputs
 
 Provide these in `.env` (see `devnet/.env.deploy.example`):
@@ -37,25 +44,10 @@ Provide these in `.env` (see `devnet/.env.deploy.example`):
 
 ## What The Commands Do
 
-- `just deploy-chain`
-- Stops existing local devnet containers.
-- Bootstraps new superchain singletons and implementations.
-- Creates and applies a net-new custom CGT chain intent.
-- Starts `op-reth`, `op-node`, `op-batcher`, `op-proposer`.
-- Validates CGT mode and fast permissioned dispute-game overrides.
-- Writes chain metadata to `devnet/work/e2e-latest.env`.
-
-- `just deploy-bridge`
-- Reuses chain metadata from `devnet/work/e2e-latest.env`.
-- Ensures compose services are up and re-validates fast permissioned dispute-game overrides.
-- Deploys test L1 token + L1/L2 bridge pair.
-- Writes `scripts/.env.runtime` and updates `devnet/work/e2e-latest.env`.
-
-- `just deposit-test <amount>`
-- Uses `scripts/.env.runtime` and runs an L1->L2 deposit test.
-
-- `just withdraw-test <amount> [resume_hash]`
-- Runs L2->L1 withdrawal prove/resolve/finalize with progress logging.
+- `just deploy-chain`: Stops existing local devnet containers, bootstraps new superchain singletons and implementations, creates/applies a net-new CGT chain intent, starts `op-reth`/`op-node`/`op-batcher`/`op-proposer`, validates CGT mode and fast permissioned dispute-game overrides, and writes `devnet/work/e2e-latest.env`.
+- `just deploy-bridge`: Reuses `devnet/work/e2e-latest.env`, ensures compose services are up, re-validates fast permissioned dispute-game overrides, deploys test L1 token + L1/L2 bridge pair, and writes `tasks/.env.runtime`.
+- `just deposit-test <amount>`: Uses `tasks/.env.runtime` and runs an L1->L2 deposit test.
+- `just withdraw-test <amount> [resume_hash]`: Runs L2->L1 withdrawal prove/resolve/finalize with progress logging.
 
 ## Runtime Files Produced
 
@@ -70,7 +62,7 @@ After `just deploy-chain`, these are generated:
 
 After `just deploy-bridge`, these are generated/updated:
 
-- `scripts/.env.runtime`
+- `tasks/.env.runtime`
 - `devnet/work/e2e-latest.env`
 
 ## Override Validation (Permissioned Dispute Game)
@@ -117,7 +109,7 @@ If you do not want to use `just`:
 
 ```bash
 source .env
-cd scripts
+cd tasks
 npx tsx deploy.ts chain
 npx tsx deploy.ts bridge
 ```
