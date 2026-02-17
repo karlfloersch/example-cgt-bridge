@@ -19,7 +19,7 @@ contract DevnetMintableERC20 is ERC20 {
         ERC20(_name, _symbol)
     {
         require(_initialHolder != address(0), "DevnetMintableERC20: initialHolder zero");
-        require(_decimals < 18, "DevnetMintableERC20: decimals must be < 18");
+        require(_decimals <= 18, "DevnetMintableERC20: decimals must be <= 18");
         TOKEN_DECIMALS_ = _decimals;
         _mint(_initialHolder, _initialSupply);
     }

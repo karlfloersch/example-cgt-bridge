@@ -145,11 +145,11 @@ contract L1CGTBridge_Test is Test {
         bridge.finalizeWithdrawal(bob, 1_000_000);
     }
 
-    /// @notice Test that the constructor reverts if decimals >= 18.
+    /// @notice Test that the constructor reverts if decimals > 18.
     function test_constructor_invalidDecimals_reverts() external {
-        MockERC20 token18 = new MockERC20("Token", "TKN", 18);
-        vm.expectRevert("L1CGTBridge: token must have fewer than 18 decimals");
-        new L1CGTBridge(IERC20(address(token18)), 18, otherBridge, ICrossDomainMessenger(messenger));
+        MockERC20 token19 = new MockERC20("Token", "TKN", 19);
+        vm.expectRevert("L1CGTBridge: token decimals must be <= 18");
+        new L1CGTBridge(IERC20(address(token19)), 19, otherBridge, ICrossDomainMessenger(messenger));
     }
 
     /// @notice Test that the constructor reverts if decimals don't match the token.

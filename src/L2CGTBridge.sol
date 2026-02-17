@@ -61,7 +61,7 @@ contract L2CGTBridge is ISemver {
         require(_otherBridge != address(0), "L2CGTBridge: other bridge is zero address");
         require(address(_messenger) != address(0), "L2CGTBridge: messenger is zero address");
         require(address(_liquidityController) != address(0), "L2CGTBridge: liquidity controller is zero address");
-        require(_tokenDecimals < 18, "L2CGTBridge: token must have fewer than 18 decimals");
+        require(_tokenDecimals <= 18, "L2CGTBridge: token decimals must be <= 18");
         OTHER_BRIDGE = _otherBridge;
         MESSENGER = _messenger;
         TOKEN_DECIMALS = _tokenDecimals;

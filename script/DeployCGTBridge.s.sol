@@ -49,7 +49,7 @@ import { L2CGTBridge } from "src/L2CGTBridge.sol";
 contract DeployCGTBridgeL1 is Script {
     /// @notice Deploys L1CGTBridge.
     /// @param _l1Token      Address of the L1 ERC-20 token to bridge.
-    /// @param _tokenDecimals Decimal count of the L1 token (must be < 18).
+    /// @param _tokenDecimals Decimal count of the L1 token (must be <= 18).
     /// @param _otherBridge   Address of the paired L2CGTBridge (already deployed on L2).
     /// @param _messenger     Address of the L1CrossDomainMessenger.
     /// @return bridge_ The deployed L1CGTBridge contract.
@@ -94,7 +94,7 @@ contract DeployCGTBridgeL1 is Script {
         require(_l1Token != address(0), "DeployCGTBridgeL1: l1Token cannot be zero address");
         require(_otherBridge != address(0), "DeployCGTBridgeL1: otherBridge cannot be zero address");
         require(_messenger != address(0), "DeployCGTBridgeL1: messenger cannot be zero address");
-        require(_tokenDecimals < 18, "DeployCGTBridgeL1: token must have fewer than 18 decimals");
+        require(_tokenDecimals <= 18, "DeployCGTBridgeL1: token decimals must be <= 18");
     }
 }
 
@@ -105,7 +105,7 @@ contract DeployCGTBridgeL2 is Script {
     /// @notice Deploys L2CGTBridge.
     /// @param _otherBridge         Address of the paired L1CGTBridge (predicted or deployed).
     /// @param _messenger           Address of the L2CrossDomainMessenger (typically 0x4200...07).
-    /// @param _tokenDecimals       Decimal count of the L1 token (must be < 18).
+    /// @param _tokenDecimals       Decimal count of the L1 token (must be <= 18).
     /// @param _liquidityController Address of the LiquidityController predeploy (typically 0x4200...2a).
     /// @return bridge_ The deployed L2CGTBridge contract.
     function run(
@@ -166,6 +166,6 @@ contract DeployCGTBridgeL2 is Script {
         require(_otherBridge != address(0), "DeployCGTBridgeL2: otherBridge cannot be zero address");
         require(_messenger != address(0), "DeployCGTBridgeL2: messenger cannot be zero address");
         require(_liquidityController != address(0), "DeployCGTBridgeL2: liquidityController cannot be zero address");
-        require(_tokenDecimals < 18, "DeployCGTBridgeL2: token must have fewer than 18 decimals");
+        require(_tokenDecimals <= 18, "DeployCGTBridgeL2: token decimals must be <= 18");
     }
 }

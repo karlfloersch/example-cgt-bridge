@@ -56,7 +56,7 @@ contract L1CGTBridge is ISemver {
         require(address(_l1Token) != address(0), "L1CGTBridge: token is zero address");
         require(_otherBridge != address(0), "L1CGTBridge: other bridge is zero address");
         require(address(_messenger) != address(0), "L1CGTBridge: messenger is zero address");
-        require(_tokenDecimals < 18, "L1CGTBridge: token must have fewer than 18 decimals");
+        require(_tokenDecimals <= 18, "L1CGTBridge: token decimals must be <= 18");
         require(
             IERC20Metadata(address(_l1Token)).decimals() == _tokenDecimals,
             "L1CGTBridge: decimals mismatch"

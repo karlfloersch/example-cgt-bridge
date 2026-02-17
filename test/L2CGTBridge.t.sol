@@ -157,13 +157,13 @@ contract L2CGTBridge_Test is Test {
         bridge.withdraw{ value: 0 }(bob, 100_000);
     }
 
-    /// @notice Test that the constructor reverts if decimals >= 18.
+    /// @notice Test that the constructor reverts if decimals > 18.
     function test_constructor_invalidDecimals_reverts() external {
-        vm.expectRevert("L2CGTBridge: token must have fewer than 18 decimals");
+        vm.expectRevert("L2CGTBridge: token decimals must be <= 18");
         new L2CGTBridge(
             otherBridge,
             ICrossDomainMessenger(messenger),
-            18,
+            19,
             ILiquidityController(liquidityController)
         );
     }
@@ -190,6 +190,15 @@ contract L2CGTBridge_Test is Test {
             ILiquidityController(liquidityController)
         );
         assertEq(bridge2.DECIMAL_SCALE_FACTOR(), 10 ** 16);
+
+        // 18 decimals: scale factor should be 1
+        L2CGTBridge bridge18 = new L2CGTBridge(
+            otherBridge,
+            ICrossDomainMessenger(messenger),
+            18,
+            ILiquidityController(liquidityController)
+        );
+        assertEq(bridge18.DECIMAL_SCALE_FACTOR(), 1);
     }
 
     /// @notice Test that the constructor reverts if other bridge is zero address.
