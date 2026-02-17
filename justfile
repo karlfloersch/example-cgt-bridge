@@ -1,10 +1,13 @@
-set shell := ["bash", "-euo", "pipefail", "-c"]
+set shell := ["env", "PS1=>", "bash", "-euo", "pipefail", "-c"]
 
 default:
     @just --list
 
 # Deploy a brand-new superchain + OPCM + chain and start compose services.
 deploy-chain:
+    if [ ! -f lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol ] || [ ! -f lib/optimism/op-deployer/README.md ]; then \
+      git submodule update --init --recursive; \
+    fi
     if [ ! -d scripts/node_modules ]; then \
       if [ -f scripts/package-lock.json ]; then \
         (cd scripts && npm ci --no-audit --no-fund); \
@@ -16,6 +19,9 @@ deploy-chain:
 
 # Deploy CGT bridge contracts + runtime wiring on the latest deployed chain.
 deploy-bridge:
+    if [ ! -f lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol ] || [ ! -f lib/optimism/op-deployer/README.md ]; then \
+      git submodule update --init --recursive; \
+    fi
     if [ ! -d scripts/node_modules ]; then \
       if [ -f scripts/package-lock.json ]; then \
         (cd scripts && npm ci --no-audit --no-fund); \

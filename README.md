@@ -7,7 +7,11 @@ This repository demonstrates a Custom Gas Token (CGT) bridge and includes a full
 If you want to deploy a brand-new chain and run deposit/withdraw tests, use this flow:
 
 ```bash
+git clone --recurse-submodules https://github.com/karlfloersch/example-cgt-bridge.git
+cd example-cgt-bridge
+
 mise install
+git submodule update --init --recursive
 cp devnet/.env.deploy.example .env
 # edit .env with your Sepolia RPC + funded keys
 source .env

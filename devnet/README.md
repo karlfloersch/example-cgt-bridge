@@ -7,7 +7,11 @@ It deploys a brand-new superchain + brand-new CGT chain on Sepolia, starts local
 ## Quickstart (Recommended)
 
 ```bash
+git clone --recurse-submodules https://github.com/karlfloersch/example-cgt-bridge.git
+cd example-cgt-bridge
+
 mise install
+git submodule update --init --recursive
 cp devnet/.env.deploy.example .env
 # edit .env with your Sepolia RPC + funded keys
 source .env
