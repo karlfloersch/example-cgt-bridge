@@ -12,7 +12,8 @@ cp devnet/.env.deploy.example .env
 # edit .env with your Sepolia RPC + funded keys
 source .env
 
-just deploy
+just deploy-chain
+just deploy-bridge
 just deposit-test 1
 just withdraw-test 1
 # optional resume if a withdrawal run was interrupted:
@@ -24,15 +25,21 @@ just withdraw-test 1
 - Use `devnet/README.md` if you want the full reproducible workflow (new superchain + new chain + Docker services + bridge + tests).
 - Use `script/DeployCGTBridge.s.sol` and contract docs only if you already have an existing CGT chain and only need bridge deployment mechanics.
 
-## What `just deploy` Does
+## What `just deploy-chain` Does
 
 - Stops old local compose services.
 - Bootstraps a new superchain and implementations.
 - Deploys a net-new custom intent chain on Sepolia.
 - Starts `op-reth`, `op-node`, `op-batcher`, `op-proposer` via Docker Compose.
 - Validates fast permissioned dispute-game overrides.
+- Writes chain runtime metadata to `devnet/work/e2e-latest.env`.
+
+## What `just deploy-bridge` Does
+
+- Reuses the latest chain metadata from `devnet/work/e2e-latest.env`.
+- Verifies services are up and re-checks fast permissioned dispute-game overrides.
 - Deploys a test L1 token and bridge pair.
-- Writes `scripts/.env.runtime` for test scripts.
+- Writes `scripts/.env.runtime` for deposit/withdraw scripts.
 
 ## Bridge Overview
 

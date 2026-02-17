@@ -304,110 +304,129 @@ require_address "CHALLENGER_ADDRESS" "$CHALLENGER_ADDRESS"
 if [[ -z "${L2_CHAIN_ID_DEC:-}" ]]; then
   L2_CHAIN_ID_DEC="$((300000000000000 + $(date -u +%s) + RANDOM))"
 fi
-L2_CHAIN_ID_HEX="$(printf '0x%064x\n' "$L2_CHAIN_ID_DEC")"
 
-SUPERCHAIN_DIR="$WORK_ROOT/superchain-$RUN_ID"
-IMPL_DIR="$WORK_ROOT/implementations-$RUN_ID"
-CHAIN_DIR="$WORK_ROOT/netnew-$RUN_ID"
-mkdir -p "$SUPERCHAIN_DIR" "$IMPL_DIR" "$CHAIN_DIR"
+DEPLOY_PHASE="${DEPLOY_PHASE:-all}"
+case "$DEPLOY_PHASE" in
+  chain | bridge | all) ;;
+  *)
+    die "DEPLOY_PHASE must be one of: chain, bridge, all"
+    ;;
+esac
+
+CHAIN_DIR=""
+SUPERCHAIN_DIR=""
+IMPL_DIR=""
+CHAIN_ID_HEX=""
+CHAIN_ID_DEC=""
+DISPUTE_GAME_FACTORY=""
+PORTAL_PROXY=""
+L1_MESSENGER=""
+L2_RPC_URL="http://127.0.0.1:${L2_HTTP_PORT}"
 
 cd "$ROOT_DIR"
 
-log "Stopping existing docker compose services"
-docker compose -f "$ROOT_DIR/devnet/docker-compose.yml" -p cgt-devnet down --remove-orphans -v || true
+if [[ "$DEPLOY_PHASE" == "chain" || "$DEPLOY_PHASE" == "all" ]]; then
+  L2_CHAIN_ID_HEX="$(printf '0x%064x\n' "$L2_CHAIN_ID_DEC")"
+  SUPERCHAIN_DIR="$WORK_ROOT/superchain-$RUN_ID"
+  IMPL_DIR="$WORK_ROOT/implementations-$RUN_ID"
+  CHAIN_DIR="$WORK_ROOT/netnew-$RUN_ID"
+  mkdir -p "$SUPERCHAIN_DIR" "$IMPL_DIR" "$CHAIN_DIR"
 
-log "Bootstrapping new superchain singletons"
-run_op_deployer "$SUPERCHAIN_DIR" bootstrap superchain \
-  --l1-rpc-url "$L1_RPC" \
-  --private-key "$DEPLOYER_KEY" \
-  --superchain-proxy-admin-owner "$SUPERCHAIN_PROXY_ADMIN_OWNER" \
-  --protocol-versions-owner "$PROTOCOL_VERSIONS_OWNER" \
-  --guardian "$GUARDIAN_ADDRESS" \
-  --outfile /work/bootstrap-superchain.json
+  log "Stopping existing docker compose services"
+  docker compose -f "$ROOT_DIR/devnet/docker-compose.yml" -p cgt-devnet down --remove-orphans -v || true
 
-SUPERCHAIN_CONFIG_PROXY="$(json_address "$SUPERCHAIN_DIR/bootstrap-superchain.json" '.superchainConfigProxyAddress // .superchainConfigProxy // .SuperchainConfigProxy')"
-PROTOCOL_VERSIONS_PROXY="$(json_address "$SUPERCHAIN_DIR/bootstrap-superchain.json" '.protocolVersionsProxyAddress // .protocolVersionsProxy // .ProtocolVersionsProxy')"
-SUPERCHAIN_PROXY_ADMIN="$(json_address "$SUPERCHAIN_DIR/bootstrap-superchain.json" '.proxyAdminAddress // .ProxyAdmin // .superchainProxyAdmin')"
+  log "Bootstrapping new superchain singletons"
+  run_op_deployer "$SUPERCHAIN_DIR" bootstrap superchain \
+    --l1-rpc-url "$L1_RPC" \
+    --private-key "$DEPLOYER_KEY" \
+    --superchain-proxy-admin-owner "$SUPERCHAIN_PROXY_ADMIN_OWNER" \
+    --protocol-versions-owner "$PROTOCOL_VERSIONS_OWNER" \
+    --guardian "$GUARDIAN_ADDRESS" \
+    --outfile /work/bootstrap-superchain.json
 
-require_address "SUPERCHAIN_CONFIG_PROXY" "$SUPERCHAIN_CONFIG_PROXY"
-require_address "PROTOCOL_VERSIONS_PROXY" "$PROTOCOL_VERSIONS_PROXY"
-require_address "SUPERCHAIN_PROXY_ADMIN" "$SUPERCHAIN_PROXY_ADMIN"
+  SUPERCHAIN_CONFIG_PROXY="$(json_address "$SUPERCHAIN_DIR/bootstrap-superchain.json" '.superchainConfigProxyAddress // .superchainConfigProxy // .SuperchainConfigProxy')"
+  PROTOCOL_VERSIONS_PROXY="$(json_address "$SUPERCHAIN_DIR/bootstrap-superchain.json" '.protocolVersionsProxyAddress // .protocolVersionsProxy // .ProtocolVersionsProxy')"
+  SUPERCHAIN_PROXY_ADMIN="$(json_address "$SUPERCHAIN_DIR/bootstrap-superchain.json" '.proxyAdminAddress // .ProxyAdmin // .superchainProxyAdmin')"
 
-log "Bootstrapping fast implementations and OPCM"
-run_op_deployer "$IMPL_DIR" bootstrap implementations \
-  --l1-rpc-url "$L1_RPC" \
-  --private-key "$DEPLOYER_KEY" \
-  --superchain-config-proxy "$SUPERCHAIN_CONFIG_PROXY" \
-  --protocol-versions-proxy "$PROTOCOL_VERSIONS_PROXY" \
-  --superchain-proxy-admin "$SUPERCHAIN_PROXY_ADMIN" \
-  --l1-proxy-admin-owner "$L1_PROXY_ADMIN_OWNER" \
-  --challenger "$CHALLENGER_ADDRESS" \
-  --challenge-period-seconds 5 \
-  --proof-maturity-delay-seconds 15 \
-  --dispute-game-finality-delay-seconds 1 \
-  --dispute-clock-extension 5 \
-  --dispute-max-clock-duration 15 \
-  --outfile /work/bootstrap-implementations.json
+  require_address "SUPERCHAIN_CONFIG_PROXY" "$SUPERCHAIN_CONFIG_PROXY"
+  require_address "PROTOCOL_VERSIONS_PROXY" "$PROTOCOL_VERSIONS_PROXY"
+  require_address "SUPERCHAIN_PROXY_ADMIN" "$SUPERCHAIN_PROXY_ADMIN"
 
-OPCM_ADDRESS="$(json_address "$IMPL_DIR/bootstrap-implementations.json" '.opcmAddress')"
-require_address "OPCM_ADDRESS" "$OPCM_ADDRESS"
+  log "Bootstrapping fast implementations and OPCM"
+  run_op_deployer "$IMPL_DIR" bootstrap implementations \
+    --l1-rpc-url "$L1_RPC" \
+    --private-key "$DEPLOYER_KEY" \
+    --superchain-config-proxy "$SUPERCHAIN_CONFIG_PROXY" \
+    --protocol-versions-proxy "$PROTOCOL_VERSIONS_PROXY" \
+    --superchain-proxy-admin "$SUPERCHAIN_PROXY_ADMIN" \
+    --l1-proxy-admin-owner "$L1_PROXY_ADMIN_OWNER" \
+    --challenger "$CHALLENGER_ADDRESS" \
+    --challenge-period-seconds 5 \
+    --proof-maturity-delay-seconds 15 \
+    --dispute-game-finality-delay-seconds 1 \
+    --dispute-clock-extension 5 \
+    --dispute-max-clock-duration 15 \
+    --outfile /work/bootstrap-implementations.json
 
-log "Initializing custom intent for net-new chain"
-run_op_deployer "$CHAIN_DIR" init \
-  --workdir /work \
-  --intent-type custom \
-  --l1-chain-id 11155111 \
-  --l2-chain-ids "$L2_CHAIN_ID_DEC"
+  OPCM_ADDRESS="$(json_address "$IMPL_DIR/bootstrap-implementations.json" '.opcmAddress')"
+  require_address "OPCM_ADDRESS" "$OPCM_ADDRESS"
 
-cp "$ROOT_DIR/devnet/intent.toml.example" "$CHAIN_DIR/intent.toml"
+  log "Initializing custom intent for net-new chain"
+  run_op_deployer "$CHAIN_DIR" init \
+    --workdir /work \
+    --intent-type custom \
+    --l1-chain-id 11155111 \
+    --l2-chain-ids "$L2_CHAIN_ID_DEC"
 
-sed -i "s|0xYOUR_BOOTSTRAPPED_OPCM_ADDRESS|$OPCM_ADDRESS|g" "$CHAIN_DIR/intent.toml"
-sed -i "s|0x00000000000000000000000000000000000000000000000000000000deadbeef|$L2_CHAIN_ID_HEX|g" "$CHAIN_DIR/intent.toml"
-sed -i "s|0xYOUR_ADDRESS|$DEPLOYER_ADDRESS|g" "$CHAIN_DIR/intent.toml"
-sed -i "s|0xYOUR_SEQUENCER_ADDRESS|$SEQUENCER_ADDRESS|g" "$CHAIN_DIR/intent.toml"
-sed -i "s|0xYOUR_BATCHER_ADDRESS|$BATCHER_ADDRESS|g" "$CHAIN_DIR/intent.toml"
-sed -i "s|0xYOUR_PROPOSER_ADDRESS|$PROPOSER_ADDRESS|g" "$CHAIN_DIR/intent.toml"
+  cp "$ROOT_DIR/devnet/intent.toml.example" "$CHAIN_DIR/intent.toml"
 
-log "Applying intent (deploying L1 contracts)"
-run_op_deployer "$CHAIN_DIR" apply \
-  --workdir /work \
-  --l1-rpc-url "$L1_RPC" \
-  --private-key "$DEPLOYER_KEY"
+  sed -i "s|0xYOUR_BOOTSTRAPPED_OPCM_ADDRESS|$OPCM_ADDRESS|g" "$CHAIN_DIR/intent.toml"
+  sed -i "s|0x00000000000000000000000000000000000000000000000000000000deadbeef|$L2_CHAIN_ID_HEX|g" "$CHAIN_DIR/intent.toml"
+  sed -i "s|0xYOUR_ADDRESS|$DEPLOYER_ADDRESS|g" "$CHAIN_DIR/intent.toml"
+  sed -i "s|0xYOUR_SEQUENCER_ADDRESS|$SEQUENCER_ADDRESS|g" "$CHAIN_DIR/intent.toml"
+  sed -i "s|0xYOUR_BATCHER_ADDRESS|$BATCHER_ADDRESS|g" "$CHAIN_DIR/intent.toml"
+  sed -i "s|0xYOUR_PROPOSER_ADDRESS|$PROPOSER_ADDRESS|g" "$CHAIN_DIR/intent.toml"
 
-CHAIN_ID_HEX="$(jq -r '.appliedIntent.chains[0].id' "$CHAIN_DIR/state.json")"
-CHAIN_ID_DEC="$(cast to-dec "$CHAIN_ID_HEX")"
-DISPUTE_GAME_FACTORY="$(jq -r '.opChainDeployments[0].DisputeGameFactoryProxy' "$CHAIN_DIR/state.json")"
-PORTAL_PROXY="$(jq -r '.opChainDeployments[0].OptimismPortalProxy' "$CHAIN_DIR/state.json")"
-L1_MESSENGER="$(jq -r '.opChainDeployments[0].L1CrossDomainMessengerProxy' "$CHAIN_DIR/state.json")"
+  log "Applying intent (deploying L1 contracts)"
+  run_op_deployer "$CHAIN_DIR" apply \
+    --workdir /work \
+    --l1-rpc-url "$L1_RPC" \
+    --private-key "$DEPLOYER_KEY"
 
-log "Generating deploy-config/genesis/rollup artifacts"
-run_op_deployer "$CHAIN_DIR" inspect deploy-config \
-  --workdir /work \
-  --outfile /work/deploy-config.json \
-  "$CHAIN_ID_DEC"
+  CHAIN_ID_HEX="$(jq -r '.appliedIntent.chains[0].id' "$CHAIN_DIR/state.json")"
+  CHAIN_ID_DEC="$(cast to-dec "$CHAIN_ID_HEX")"
+  DISPUTE_GAME_FACTORY="$(jq -r '.opChainDeployments[0].DisputeGameFactoryProxy' "$CHAIN_DIR/state.json")"
+  PORTAL_PROXY="$(jq -r '.opChainDeployments[0].OptimismPortalProxy' "$CHAIN_DIR/state.json")"
+  L1_MESSENGER="$(jq -r '.opChainDeployments[0].L1CrossDomainMessengerProxy' "$CHAIN_DIR/state.json")"
 
-run_op_deployer "$CHAIN_DIR" inspect genesis \
-  --workdir /work \
-  --outfile /work/genesis.json \
-  "$CHAIN_ID_DEC"
+  log "Generating deploy-config/genesis/rollup artifacts"
+  run_op_deployer "$CHAIN_DIR" inspect deploy-config \
+    --workdir /work \
+    --outfile /work/deploy-config.json \
+    "$CHAIN_ID_DEC"
 
-run_op_deployer "$CHAIN_DIR" inspect rollup \
-  --workdir /work \
-  --outfile /work/rollup.json \
-  "$CHAIN_ID_DEC"
+  run_op_deployer "$CHAIN_DIR" inspect genesis \
+    --workdir /work \
+    --outfile /work/genesis.json \
+    "$CHAIN_ID_DEC"
 
-USE_CGT="$(jq -r '.useCustomGasToken' "$CHAIN_DIR/deploy-config.json")"
-[[ "$USE_CGT" == "true" ]] || die "Deploy config useCustomGasToken is not true: $USE_CGT"
+  run_op_deployer "$CHAIN_DIR" inspect rollup \
+    --workdir /work \
+    --outfile /work/rollup.json \
+    "$CHAIN_ID_DEC"
 
-BATCH_INBOX="$(jq -r '.batch_inbox_address' "$CHAIN_DIR/rollup.json")"
+  USE_CGT="$(jq -r '.useCustomGasToken' "$CHAIN_DIR/deploy-config.json")"
+  [[ "$USE_CGT" == "true" ]] || die "Deploy config useCustomGasToken is not true: $USE_CGT"
 
-cp "$CHAIN_DIR/genesis.json" "$ROOT_DIR/devnet/genesis.json"
-cp "$CHAIN_DIR/rollup.json" "$ROOT_DIR/devnet/rollup.json"
-openssl rand -hex 32 > "$ROOT_DIR/devnet/jwt.hex"
-openssl rand -hex 32 > "$ROOT_DIR/devnet/p2p-key.txt"
+  BATCH_INBOX="$(jq -r '.batch_inbox_address' "$CHAIN_DIR/rollup.json")"
 
-log "Writing devnet/.env"
-cat > "$ROOT_DIR/devnet/.env" <<EOF
+  cp "$CHAIN_DIR/genesis.json" "$ROOT_DIR/devnet/genesis.json"
+  cp "$CHAIN_DIR/rollup.json" "$ROOT_DIR/devnet/rollup.json"
+  openssl rand -hex 32 > "$ROOT_DIR/devnet/jwt.hex"
+  openssl rand -hex 32 > "$ROOT_DIR/devnet/p2p-key.txt"
+
+  log "Writing devnet/.env"
+  cat > "$ROOT_DIR/devnet/.env" <<EOF
 L1_RPC=$L1_RPC
 L1_BEACON=$L1_BEACON
 SEQUENCER_KEY=$SEQUENCER_KEY
@@ -427,34 +446,99 @@ L2_AUTH_PORT=$L2_AUTH_PORT
 OP_NODE_RPC_PORT=$OP_NODE_RPC_PORT
 EOF
 
-log "Starting docker compose services"
-(cd "$ROOT_DIR/devnet" && docker compose up -d)
-(cd "$ROOT_DIR/devnet" && docker compose ps)
+  log "Starting docker compose services"
+  (cd "$ROOT_DIR/devnet" && docker compose up -d)
+  (cd "$ROOT_DIR/devnet" && docker compose ps)
 
-L2_RPC_URL="http://127.0.0.1:${L2_HTTP_PORT}"
-if ! wait_for_l2_rpc "$L2_RPC_URL"; then
-  die "L2 RPC did not come up on $L2_RPC_URL"
+  if ! wait_for_l2_rpc "$L2_RPC_URL"; then
+    die "L2 RPC did not come up on $L2_RPC_URL"
+  fi
+
+  L2_CHAIN_CHECK="$(cast chain-id --rpc-url "$L2_RPC_URL")"
+  [[ "$L2_CHAIN_CHECK" == "$CHAIN_ID_DEC" ]] || die "Unexpected L2 chain id. expected=$CHAIN_ID_DEC got=$L2_CHAIN_CHECK"
+
+  IS_CGT="$(cast call "$IS_CUSTOM_GAS_TOKEN_PREDEPLOY" 'isCustomGasToken()(bool)' --rpc-url "$L2_RPC_URL")"
+  [[ "$IS_CGT" == "true" ]] || die "isCustomGasToken returned $IS_CGT"
+
+  ensure_l2_gas_for_deployer "$L2_RPC_URL" "${L2_DEPLOYER_MIN_WEI:-200000000000000000}"
+
+  log "Validating fast override values for permissioned dispute game"
+  PERMISSIONED_IMPL="$(cast call "$DISPUTE_GAME_FACTORY" 'gameImpls(uint32)(address)' 1 --rpc-url "$L1_RPC")"
+  MAX_CLOCK="$(cast call "$PERMISSIONED_IMPL" 'maxClockDuration()(uint64)' --rpc-url "$L1_RPC")"
+  CLOCK_EXT="$(cast call "$PERMISSIONED_IMPL" 'clockExtension()(uint64)' --rpc-url "$L1_RPC")"
+  PROOF_DELAY="$(cast call "$PORTAL_PROXY" 'proofMaturityDelaySeconds()(uint256)' --rpc-url "$L1_RPC")"
+  FINALITY_DELAY="$(cast call "$PORTAL_PROXY" 'disputeGameFinalityDelaySeconds()(uint256)' --rpc-url "$L1_RPC")"
+
+  [[ "$MAX_CLOCK" == "15" ]] || die "Unexpected maxClockDuration: $MAX_CLOCK"
+  [[ "$CLOCK_EXT" == "5" ]] || die "Unexpected clockExtension: $CLOCK_EXT"
+  [[ "$PROOF_DELAY" == "15" ]] || die "Unexpected proofMaturityDelaySeconds: $PROOF_DELAY"
+  [[ "$FINALITY_DELAY" == "1" ]] || die "Unexpected disputeGameFinalityDelaySeconds: $FINALITY_DELAY"
+
+  cat > "$ROOT_DIR/devnet/work/e2e-latest.env" <<EOF
+RUN_ID=$RUN_ID
+WORKDIR=$CHAIN_DIR
+SUPERCHAIN_DIR=$SUPERCHAIN_DIR
+IMPLEMENTATIONS_DIR=$IMPL_DIR
+L2_CHAIN_ID=$CHAIN_ID_DEC
+DISPUTE_GAME_FACTORY=$DISPUTE_GAME_FACTORY
+PORTAL_ADDRESS=$PORTAL_PROXY
+L1_MESSENGER=$L1_MESSENGER
+L2_RPC=$L2_RPC_URL
+EOF
 fi
 
-L2_CHAIN_CHECK="$(cast chain-id --rpc-url "$L2_RPC_URL")"
-[[ "$L2_CHAIN_CHECK" == "$CHAIN_ID_DEC" ]] || die "Unexpected L2 chain id. expected=$CHAIN_ID_DEC got=$L2_CHAIN_CHECK"
+if [[ "$DEPLOY_PHASE" == "bridge" ]]; then
+  LATEST_ENV="$ROOT_DIR/devnet/work/e2e-latest.env"
+  [[ -f "$LATEST_ENV" ]] || die "Missing $LATEST_ENV. Run deploy-chain first."
+  # shellcheck disable=SC1090
+  source "$LATEST_ENV"
 
-IS_CGT="$(cast call "$IS_CUSTOM_GAS_TOKEN_PREDEPLOY" 'isCustomGasToken()(bool)' --rpc-url "$L2_RPC_URL")"
-[[ "$IS_CGT" == "true" ]] || die "isCustomGasToken returned $IS_CGT"
+  CHAIN_DIR="${WORKDIR:-}"
+  [[ -n "$CHAIN_DIR" ]] || die "WORKDIR missing from $LATEST_ENV. Run deploy-chain first."
+  [[ -f "$CHAIN_DIR/state.json" ]] || die "Missing $CHAIN_DIR/state.json. Run deploy-chain first."
 
-ensure_l2_gas_for_deployer "$L2_RPC_URL" "${L2_DEPLOYER_MIN_WEI:-200000000000000000}"
+  CHAIN_ID_HEX="$(jq -r '.appliedIntent.chains[0].id' "$CHAIN_DIR/state.json")"
+  CHAIN_ID_DEC="$(cast to-dec "$CHAIN_ID_HEX")"
+  DISPUTE_GAME_FACTORY="$(jq -r '.opChainDeployments[0].DisputeGameFactoryProxy' "$CHAIN_DIR/state.json")"
+  PORTAL_PROXY="$(jq -r '.opChainDeployments[0].OptimismPortalProxy' "$CHAIN_DIR/state.json")"
+  L1_MESSENGER="$(jq -r '.opChainDeployments[0].L1CrossDomainMessengerProxy' "$CHAIN_DIR/state.json")"
+  SUPERCHAIN_DIR="${SUPERCHAIN_DIR:-}"
+  IMPL_DIR="${IMPLEMENTATIONS_DIR:-}"
 
-log "Validating fast override values for permissioned dispute game"
-PERMISSIONED_IMPL="$(cast call "$DISPUTE_GAME_FACTORY" 'gameImpls(uint32)(address)' 1 --rpc-url "$L1_RPC")"
-MAX_CLOCK="$(cast call "$PERMISSIONED_IMPL" 'maxClockDuration()(uint64)' --rpc-url "$L1_RPC")"
-CLOCK_EXT="$(cast call "$PERMISSIONED_IMPL" 'clockExtension()(uint64)' --rpc-url "$L1_RPC")"
-PROOF_DELAY="$(cast call "$PORTAL_PROXY" 'proofMaturityDelaySeconds()(uint256)' --rpc-url "$L1_RPC")"
-FINALITY_DELAY="$(cast call "$PORTAL_PROXY" 'disputeGameFinalityDelaySeconds()(uint256)' --rpc-url "$L1_RPC")"
+  log "Ensuring docker compose services are running"
+  (cd "$ROOT_DIR/devnet" && docker compose up -d)
+  (cd "$ROOT_DIR/devnet" && docker compose ps)
 
-[[ "$MAX_CLOCK" == "15" ]] || die "Unexpected maxClockDuration: $MAX_CLOCK"
-[[ "$CLOCK_EXT" == "5" ]] || die "Unexpected clockExtension: $CLOCK_EXT"
-[[ "$PROOF_DELAY" == "15" ]] || die "Unexpected proofMaturityDelaySeconds: $PROOF_DELAY"
-[[ "$FINALITY_DELAY" == "1" ]] || die "Unexpected disputeGameFinalityDelaySeconds: $FINALITY_DELAY"
+  if ! wait_for_l2_rpc "$L2_RPC_URL"; then
+    die "L2 RPC did not come up on $L2_RPC_URL"
+  fi
+
+  L2_CHAIN_CHECK="$(cast chain-id --rpc-url "$L2_RPC_URL")"
+  [[ "$L2_CHAIN_CHECK" == "$CHAIN_ID_DEC" ]] || die "Unexpected L2 chain id. expected=$CHAIN_ID_DEC got=$L2_CHAIN_CHECK"
+
+  IS_CGT="$(cast call "$IS_CUSTOM_GAS_TOKEN_PREDEPLOY" 'isCustomGasToken()(bool)' --rpc-url "$L2_RPC_URL")"
+  [[ "$IS_CGT" == "true" ]] || die "isCustomGasToken returned $IS_CGT"
+
+  ensure_l2_gas_for_deployer "$L2_RPC_URL" "${L2_DEPLOYER_MIN_WEI:-200000000000000000}"
+
+  log "Validating fast override values for permissioned dispute game"
+  PERMISSIONED_IMPL="$(cast call "$DISPUTE_GAME_FACTORY" 'gameImpls(uint32)(address)' 1 --rpc-url "$L1_RPC")"
+  MAX_CLOCK="$(cast call "$PERMISSIONED_IMPL" 'maxClockDuration()(uint64)' --rpc-url "$L1_RPC")"
+  CLOCK_EXT="$(cast call "$PERMISSIONED_IMPL" 'clockExtension()(uint64)' --rpc-url "$L1_RPC")"
+  PROOF_DELAY="$(cast call "$PORTAL_PROXY" 'proofMaturityDelaySeconds()(uint256)' --rpc-url "$L1_RPC")"
+  FINALITY_DELAY="$(cast call "$PORTAL_PROXY" 'disputeGameFinalityDelaySeconds()(uint256)' --rpc-url "$L1_RPC")"
+
+  [[ "$MAX_CLOCK" == "15" ]] || die "Unexpected maxClockDuration: $MAX_CLOCK"
+  [[ "$CLOCK_EXT" == "5" ]] || die "Unexpected clockExtension: $CLOCK_EXT"
+  [[ "$PROOF_DELAY" == "15" ]] || die "Unexpected proofMaturityDelaySeconds: $PROOF_DELAY"
+  [[ "$FINALITY_DELAY" == "1" ]] || die "Unexpected disputeGameFinalityDelaySeconds: $FINALITY_DELAY"
+fi
+
+if [[ "$DEPLOY_PHASE" == "chain" ]]; then
+  log "Chain deployment complete"
+  echo "Next step: just deploy-bridge"
+  exit 0
+fi
 
 log "Deploying devnet ERC-20 token on L1"
 L1_TOKEN_BROADCAST_JSON="$ROOT_DIR/broadcast/DeployDevnetMintableToken.s.sol/11155111/run-latest.json"
@@ -539,9 +623,14 @@ L1_TOKEN=$L1_TOKEN
 TOKEN_DECIMALS=$TOKEN_DECIMALS
 DISPUTE_GAME_FACTORY=$DISPUTE_GAME_FACTORY
 PORTAL_ADDRESS=$PORTAL_PROXY
+L1_MESSENGER=$L1_MESSENGER
 L2_RPC=$L2_RPC_URL
 EOF
 
-log "Deployment complete"
+if [[ "$DEPLOY_PHASE" == "bridge" ]]; then
+  log "Bridge deployment complete"
+else
+  log "Deployment complete"
+fi
 echo "Run deposit test:   just deposit-test 1"
 echo "Run withdrawal test: just withdraw-test 1"

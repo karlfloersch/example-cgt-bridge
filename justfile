@@ -3,9 +3,13 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 default:
     @just --list
 
-# Deploy a brand-new superchain + OPCM + chain, start compose, deploy bridge, and write scripts/.env.runtime.
-deploy:
-    ./devnet/scripts/deploy-new-superchain-and-chain.sh
+# Deploy a brand-new superchain + OPCM + chain and start compose services.
+deploy-chain:
+    ./devnet/scripts/deploy-chain.sh
+
+# Deploy CGT bridge contracts + runtime wiring on the latest deployed chain.
+deploy-bridge:
+    ./devnet/scripts/deploy-bridge.sh
 
 # Deposit test amount in token units (default: 1 token).
 deposit-test amount="1":

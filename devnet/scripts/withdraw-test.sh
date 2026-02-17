@@ -6,7 +6,7 @@ AMOUNT="${1:-1}"
 RESUME_HASH="${2:-}"
 
 [[ -f "$ROOT_DIR/scripts/.env.runtime" ]] || {
-  echo "Missing $ROOT_DIR/scripts/.env.runtime. Run 'just deploy' first." >&2
+  echo "Missing $ROOT_DIR/scripts/.env.runtime. Run 'just deploy-chain' then 'just deploy-bridge' first." >&2
   exit 1
 }
 

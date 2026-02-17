@@ -12,7 +12,8 @@ cp devnet/.env.deploy.example .env
 # edit .env with your Sepolia RPC + funded keys
 source .env
 
-just deploy
+just deploy-chain
+just deploy-bridge
 just deposit-test 1
 just withdraw-test 1
 # optional resume if withdrawal was interrupted:
@@ -32,14 +33,19 @@ Provide these in `.env` (see `devnet/.env.deploy.example`):
 
 ## What The Commands Do
 
-- `just deploy`
+- `just deploy-chain`
 - Stops existing local devnet containers.
 - Bootstraps new superchain singletons and implementations.
 - Creates and applies a net-new custom CGT chain intent.
 - Starts `op-reth`, `op-node`, `op-batcher`, `op-proposer`.
 - Validates CGT mode and fast permissioned dispute-game overrides.
+- Writes chain metadata to `devnet/work/e2e-latest.env`.
+
+- `just deploy-bridge`
+- Reuses chain metadata from `devnet/work/e2e-latest.env`.
+- Ensures compose services are up and re-validates fast permissioned dispute-game overrides.
 - Deploys test L1 token + L1/L2 bridge pair.
-- Writes runtime files used by test scripts.
+- Writes `scripts/.env.runtime` and updates `devnet/work/e2e-latest.env`.
 
 - `just deposit-test <amount>`
 - Uses `scripts/.env.runtime` and runs an L1->L2 deposit test.
@@ -49,19 +55,23 @@ Provide these in `.env` (see `devnet/.env.deploy.example`):
 
 ## Runtime Files Produced
 
-After `just deploy`, these are generated:
+After `just deploy-chain`, these are generated:
 
 - `devnet/.env`
 - `devnet/genesis.json`
 - `devnet/rollup.json`
 - `devnet/jwt.hex`
 - `devnet/p2p-key.txt`
+- `devnet/work/e2e-latest.env`
+
+After `just deploy-bridge`, these are generated/updated:
+
 - `scripts/.env.runtime`
 - `devnet/work/e2e-latest.env`
 
 ## Override Validation (Permissioned Dispute Game)
 
-`just deploy` already validates these values. You can re-check manually:
+`just deploy-chain` validates these values, and `just deploy-bridge` re-checks them. You can also verify manually:
 
 ```bash
 source devnet/.env
@@ -97,13 +107,14 @@ Expected:
   - `FORGE_RETRY_SLEEP_SECONDS`
   - `FORGE_CONTRACT_WAIT_ATTEMPTS`
 
-## Optional: Run Deploy Script Directly
+## Optional: Run Deploy Scripts Directly
 
 If you do not want to use `just`:
 
 ```bash
 source .env
-./devnet/scripts/deploy-new-superchain-and-chain.sh
+./devnet/scripts/deploy-chain.sh
+./devnet/scripts/deploy-bridge.sh
 ```
 
 ## Teardown
