@@ -5,11 +5,25 @@ default:
 
 # Deploy a brand-new superchain + OPCM + chain and start compose services.
 deploy-chain:
-    ./devnet/scripts/deploy-chain.sh
+    if [ ! -d scripts/node_modules ]; then \
+      if [ -f scripts/package-lock.json ]; then \
+        (cd scripts && npm ci --no-audit --no-fund); \
+      else \
+        (cd scripts && npm install --no-audit --no-fund); \
+      fi; \
+    fi
+    cd scripts && npx tsx deploy.ts chain
 
 # Deploy CGT bridge contracts + runtime wiring on the latest deployed chain.
 deploy-bridge:
-    ./devnet/scripts/deploy-bridge.sh
+    if [ ! -d scripts/node_modules ]; then \
+      if [ -f scripts/package-lock.json ]; then \
+        (cd scripts && npm ci --no-audit --no-fund); \
+      else \
+        (cd scripts && npm install --no-audit --no-fund); \
+      fi; \
+    fi
+    cd scripts && npx tsx deploy.ts bridge
 
 # Deposit test amount in token units (default: 1 token).
 deposit-test amount="1":

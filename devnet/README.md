@@ -107,14 +107,15 @@ Expected:
   - `FORGE_RETRY_SLEEP_SECONDS`
   - `FORGE_CONTRACT_WAIT_ATTEMPTS`
 
-## Optional: Run Deploy Scripts Directly
+## Optional: Run Deploy Command Directly
 
 If you do not want to use `just`:
 
 ```bash
 source .env
-./devnet/scripts/deploy-chain.sh
-./devnet/scripts/deploy-bridge.sh
+cd scripts
+npx tsx deploy.ts chain
+npx tsx deploy.ts bridge
 ```
 
 ## Teardown

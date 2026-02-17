@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "deploy:chain": "tsx deploy.ts chain",
+    "deploy:bridge": "tsx deploy.ts bridge",
     "deposit": "tsx deposit.ts",
     "withdraw": "tsx withdraw.ts"
   },

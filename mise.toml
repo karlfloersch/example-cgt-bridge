@@ -13,5 +13,4 @@ cast = "ubi:foundry-rs/foundry[exe=cast]"
 
 # System dependencies not managed by mise:
 # - docker + docker compose
-# - openssl
 # - timeout (or gtimeout on macOS)

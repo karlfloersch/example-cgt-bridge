@@ -68,8 +68,8 @@ Scale factor:
 ## Repository Layout
 
 - `devnet/README.md`: canonical step-by-step operational guide.
-- `devnet/scripts/`: deploy + test wrappers.
-- `scripts/`: TypeScript deposit/withdraw flows.
+- `devnet/scripts/`: deposit/withdraw wrappers.
+- `scripts/`: TypeScript deploy + deposit/withdraw flows.
 - `src/`: bridge/token contracts.
 - `script/`: Forge deployment scripts.
 - `justfile`: primary operator commands.
